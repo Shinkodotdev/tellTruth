@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tell a Truth</title>
+    <style>
+        body {
+            font-size: .9em;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #background {
+            position: fixed;
+            z-index: -1;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #071a1e 0%, #274249 100%);
+        }
+
+        #wrapper {
+            position: relative;
+            width: 200px;
+            padding-top: 100px;
+            margin: 0 auto;
+            perspective: 1200px;
+        }
+
+        #platform {
+            margin-top: 100px;
+            transform-style: preserve-3d;
+        }
+
+        #dice {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            transform-style: preserve-3d;
+            animation: spin 2s infinite linear;
+        }
+
+        .side {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: #fff;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #444;
+            box-shadow: inset 0 0 20px #ccc;
+        }
+
+        .side.front { transform: rotateX(0deg) translateZ(100px); }
+        .side.back { transform: rotateX(180deg) translateZ(100px); }
+        .side.right { transform: rotateY(90deg) translateZ(100px); }
+        .side.left { transform: rotateY(-90deg) translateZ(100px); }
+        .side.top { transform: rotateX(90deg) translateZ(100px); }
+        .side.bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+        label, input[type="checkbox"]:before {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: block;
+            width: 120px;
+            height: 31px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            border-radius: 6px;
+            border: 1px solid;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] { display: none; }
+
+        label {
+            transition: opacity 0.3s ease;
+        }
+
+        label:hover {
+            opacity: 1;
+            box-shadow: 0 0 18px rgba(255, 255, 255, .5);
+        }
+
+        #roll:checked ~ #platform > #dice {
+            animation: none;
+        }
+
+        @keyframes spin {
+            0%, 100% { transform: rotateX(0deg) rotateY(0deg); }
+            25% { transform: rotateX(90deg) rotateY(0deg); }
+            50% { transform: rotateX(180deg) rotateY(90deg); }
+            75% { transform: rotateX(270deg) rotateY(180deg); }
+        }
+        #rolling-indicator {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            color: #fff;
+        }
+        #question-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #ccc;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        #question-container button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <div id="wrapper">
+        <input id="roll" type="checkbox">
+        <div id="rolling-indicator" style="display: none;">Rolling... <span id="countdown"></span></div>
+
+        <label for="roll">Roll it!</label>
+
+        <div id="platform">
+            <div id="dice">
+                <div class="side front">Personal Values and Beliefs</div>
+                <div class="side back">Past Experiences and Lessons Learned</div>
+                <div class="side right">Fears and Insecurities</div>
+                <div class="side left">Future Goals and Aspirations</div>
+                <div class="side top">Trust and Intimacy</div>
+                <div class="side bottom">Communication and Conflict Resolution</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="question-popup" style="display: none;">
+        <div id="question-container">
+            <p id="question-text"></p>
+            <button onclick="closeQuestion()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const rollCheckbox = document.getElementById('roll');
+        const dice = document.getElementById('dice');
+        const rollingIndicator = document.getElementById('rolling-indicator');
+        const countdownElement = document.getElementById('countdown');
+        const questionPopup = document.getElementById('question-popup');
+        const questionText = document.getElementById('question-text');
+
+        const diceFaces = {
+            front: 'rotateX(0deg) rotateY(0deg)',
+            back: 'rotateX(180deg) rotateY(0deg)',
+            right: 'rotateX(0deg) rotateY(90deg)',
+            left: 'rotateX(0deg) rotateY(-90deg)',
+            top: 'rotateX(90deg) rotateY(0deg)',
+            bottom: 'rotateX(-90deg) rotateY(0deg)'
+        };
+
+        const questions = {
+            front: [
+                "What core value do you hold most dearly?",
+                "How do your personal beliefs guide your actions?",
+                "Can you share a moment where your values were challenged?"
+            ],
+            back: [
+                "What is one lesson from your past you cherish the most?",
+                "How has a failure in your past shaped who you are today?",
+                "What memory from your childhood still influences you?"
+            ],
+            right: [
+                "What is a fear you've recently overcome?",
+                "How do you handle feelings of insecurity?",
+                "What is one thing you're working to be less afraid of?"
+            ],
+            left: [
+                "What is your biggest goal for the next year?",
+                "What steps are you taking to achieve your future aspirations?",
+                "How do you envision your ideal future?"
+            ],
+            top: [
+                "What does trust mean to you in a relationship?",
+                "How do you build intimacy with someone you care about?",
+                "What does a healthy intimate relationship look like to you?"
+            ],
+            bottom: [
+                "How do you handle conflicts in relationships?",
+                "What is your preferred way to communicate during tough times?",
+                "Can you recall a time when effective communication solved a problem?"
+            ]
+        };
+
+        rollCheckbox.addEventListener('change', () => {
+            if (rollCheckbox.checked) {
+                startRolling();
+            }
+        });
+
+        function startRolling() {
+            // Show rolling indicator and reset countdown
+            rollingIndicator.style.display = 'block';
+            let countdown = 3;
+            countdownElement.textContent = countdown;
+
+            // Update countdown every second
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    countdownElement.textContent = countdown;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 1000);
+
+            // Start rolling animation
+            dice.style.animation = 'spin 2s infinite linear';
+
+            // Stop rolling after 3 seconds
+            setTimeout(() => {
+                stopDice();
+                rollingIndicator.style.display = 'none';
+            }, 3000);
+        }
+
+        function stopDice() {
+            // Stop the animation and pick a random face
+            dice.style.animation = 'none';
+            const faceKeys = Object.keys(diceFaces);
+            const randomKey = faceKeys[Math.floor(Math.random() * faceKeys.length)];
+            dice.style.transform = diceFaces[randomKey];
+
+            // Reset roll checkbox
+            rollCheckbox.checked = false;
+
+            // Add delay before showing the question
+            setTimeout(() => {
+                showQuestion(randomKey);
+            }, 2000); // 2-second delay
+        }
+
+        function showQuestion(faceKey) {
+            const categoryQuestions = questions[faceKey];
+            const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+            questionText.textContent = randomQuestion;
+            questionPopup.style.display = 'block';
+        }
+
+        function closeQuestion() {
+            questionPopup.style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>
